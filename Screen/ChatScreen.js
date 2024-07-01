@@ -70,7 +70,7 @@ const ChatScreen = ({ navigation, route }) => {
           }));
           setMessages(messageList);
 
-          // Marquer les messages comme lus pour l'utilisateur actuel
+          // Marquer les mesages comme lus pour l'utilisateur actuel
           messageList.forEach((message) => {
             if (message.receiverId === currentUser.uid && !message.read[currentUser.uid]) {
               const messageRef = child(messagesRef, message.id);

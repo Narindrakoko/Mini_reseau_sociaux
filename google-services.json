@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "426992373456",
+    "firebase_url": "https://devgeolocalisation-default-rtdb.firebaseio.com",
+    "project_id": "devgeolocalisation",
+    "storage_bucket": "devgeolocalisation.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426992373456:android:e0291aa31c72bd91ba18d5",
+        "android_client_info": {
+          "package_name": "com.koko.Apps"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLgFGwPsqyMcLEUi6u2QxKW_5gINQ32X4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

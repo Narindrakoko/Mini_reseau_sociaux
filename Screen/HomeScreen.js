@@ -8,7 +8,7 @@ const HomeScreen = () => {
   return (
     <View style={styles.container}>
     
-      <NavigationBar />
+    
       <Feed />
       <CreatePostButton />
     </View>

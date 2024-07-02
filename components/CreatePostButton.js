@@ -31,16 +31,8 @@ const CreatePostButton = () => {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.button} onPress={handleCreatePost}>
-        {userPhotoURL ? (
-          <Image source={{ uri: userPhotoURL }} style={styles.profilePicture} />
-        ) : (
-          <Image
-            source={require('../assets/2.jpg')}
-            style={styles.profilePicture}
-          />
-        )}
-        <Text style={styles.buttonText}>Faire une publication</Text>
-        <Icon name="camera-alt" size={24} color="#000000" />
+        <Icon name="add-circle" size={60} color="#075E54" />
+        <Text style={styles.indicatorText}>Faire une publication</Text>
       </TouchableOpacity>
     </View>
   );
@@ -49,30 +41,17 @@ const CreatePostButton = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 555,
+    bottom: 540,
     right: 20,
-    width: 300,
-  },
-  button: {
-    backgroundColor: 'transparent',
-    padding: 12,
-    borderRadius: 30,
-    elevation: 5,
-    flexDirection: 'row',
     alignItems: 'center',
   },
-  buttonText: {
-    color: 'Black',
-    fontSize: 14,
-    marginTop: 2,
-    marginHorizontal: 8,
-    flex: 1,
+  button: {
+    alignItems: 'center',
   },
-  profilePicture: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 8,
+  indicatorText: {
+    color: '#075E54',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
 

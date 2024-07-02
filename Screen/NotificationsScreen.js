@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Image } from 'react-native';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { getDatabase, ref, onValue, update } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 
 const NotificationsScreen = () => {
   const [notifications, setNotifications] = useState([]);
+  const [selectedNotifications, setSelectedNotifications] = useState([]);
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -56,8 +57,28 @@ const NotificationsScreen = () => {
     });
   }, [user.uid]);
 
+  const handleNotificationSelect = (id) => {
+    setSelectedNotifications((prevSelected) =>
+      prevSelected.includes(id)
+        ? prevSelected.filter((notificationId) => notificationId !== id)
+        : [...prevSelected, id]
+    );
+  };
+
+  const handleDeleteNotifications = () => {
+    // Supprimer les notifications sélectionnées de la base de données
+    // Vous devrez implémenter la logique pour supprimer les notifications de la base de données
+    setSelectedNotifications([]);
+  };
+
   const renderNotification = ({ item }) => (
-    <View style={styles.notification}>
+    <TouchableOpacity
+      style={[
+        styles.notification,
+        selectedNotifications.includes(item.id) && styles.selectedNotification,
+      ]}
+      onPress={() => handleNotificationSelect(item.id)}
+    >
       <Image source={{ uri: item.userPhotoURL }} style={styles.notificationImage} />
       <View style={styles.notificationTextContainer}>
         <Text style={styles.notificationText}>
@@ -65,25 +86,38 @@ const NotificationsScreen = () => {
         </Text>
         <Text style={styles.notificationTimestamp}>{new Date(item.timestamp).toLocaleString()}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
-    <FlatList
-      data={notifications}
-      keyExtractor={(item) => item.id}
-      renderItem={renderNotification}
-    />
+    <View style={styles.container}>
+      <FlatList
+        data={notifications}
+        keyExtractor={(item) => item.id}
+        renderItem={renderNotification}
+      />
+      {selectedNotifications.length > 0 && (
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteNotifications}>
+          <Text style={styles.deleteButtonText}>Supprimer les notifications sélectionnées</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   notification: {
     flexDirection: 'row',
     padding: 15,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+  },
+  selectedNotification: {
+    backgroundColor: '#e0e0e0',
   },
   notificationImage: {
     width: 40,
@@ -100,6 +134,15 @@ const styles = StyleSheet.create({
   notificationTimestamp: {
     fontSize: 12,
     color: 'gray',
+  },
+  deleteButton: {
+    backgroundColor: '#ff3333',
+    padding: 15,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

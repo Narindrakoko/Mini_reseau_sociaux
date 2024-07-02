@@ -4,16 +4,19 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { auth, database } from '../firebaseConfig';
 import { ref, onValue } from 'firebase/database';
+import { Badge } from 'react-native-elements'; // Importation du composant Badge de react-native-elements
 
 const NavigationBar = () => {
   const navigation = useNavigation();
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [lastSentMessage, setLastSentMessage] = useState('');
+  const [notificationsCount, setNotificationsCount] = useState(0); // État pour le nombre de notifications
   const currentUser = auth.currentUser;
 
   useEffect(() => {
     const messagesRef = ref(database, 'messages');
     const userMessageRef = ref(database, `userMessages/${currentUser.uid}`);
+    const notificationsRef = ref(database, `notifications/${currentUser.uid}`); // Référence pour les notifications
 
     const unsubscribeMessages = onValue(messagesRef, (snapshot) => {
       const messages = snapshot.val() || {};
@@ -42,9 +45,16 @@ const NavigationBar = () => {
       }
     });
 
+    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
+      const notifications = snapshot.val() || {};
+      const notificationsCount = Object.keys(notifications).length; // Calcul du nombre de notifications
+      setNotificationsCount(notificationsCount);
+    });
+
     return () => {
       unsubscribeMessages();
       unsubscribeUserMessage();
+      unsubscribeNotifications(); // Désabonnement des notifications
     };
   }, [currentUser]);
 
@@ -57,18 +67,20 @@ const NavigationBar = () => {
         <Icon name="account-circle" size={24} color="white" />
       </TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.navigate('users')}>
-        <Icon
-          name="chat"
-          size={24}
-          color="white"
-          badge={unreadMessagesCount > 0}
-          badgeCount={unreadMessagesCount}
+        <Badge
+          value={unreadMessagesCount}
+          status="error"
+          containerStyle={{ position: 'absolute', top: -6, right: -10 }}
         />
-        {lastSentMessage && (
-          <Text style={styles.lastSentMessageText}>{lastSentMessage}</Text>
-        )}
+        <Icon name="chat" size={24} color="white" />
+        
       </TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+        <Badge
+          value={notificationsCount}
+          status="error"
+          containerStyle={{ position: 'absolute', top: -6, right: -10 }}
+        />
         <Icon name="bell" size={24} color="white" />
       </TouchableOpacity>
     </View>
@@ -79,7 +91,7 @@ const styles = StyleSheet.create({
   navbar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#075E54', // Couleur verte de WhatsApp
+    backgroundColor: '#075E54',
     padding: 10,
     marginBottom: 65,
   },

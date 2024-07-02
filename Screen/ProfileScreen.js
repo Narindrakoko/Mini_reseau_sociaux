@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { getAuth, signOut, updateProfile } from 'firebase/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getDatabase, ref as dbRef, onValue, update, set } from 'firebase/database';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 
 const ProfileScreen = ({ navigation }) => {
   const auth = getAuth();
@@ -129,64 +129,78 @@ const ProfileScreen = ({ navigation }) => {
             <TouchableOpacity onPress={pickImage}>
               <Image source={{ uri: profileImage }} style={styles.profileImage} />
               <View style={styles.cameraIcon}>
-                <MaterialIcons name="camera-alt" size={24} color="white" />
+                <Ionicons name="camera" size={24} color="white" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.email}>{user.email}</Text>
-            <Text style={styles.verified}>{user.emailVerified ? 'Verified' : 'Not Verified'}</Text>
+            <Text style={styles.username}>{name}</Text>
           </View>
+
+         
           <View style={styles.infoSection}>
-            <View style={styles.infoRow}>
-              <MaterialIcons name="person" size={24} color="gray" />
+          <View style={styles.infoRow}>
+              <MaterialIcons name="account-circle" size={24} color="#075e54" />
               <TextInput
                 style={styles.input}
-                placeholder="First Name"
-                value={name}
-                onChangeText={setName}
+                placeholder="Name"
+                value={username}
+                onChangeText={setUsername}
               />
+              <Text style={styles.indicator}>Name</Text>
             </View>
             <View style={styles.infoRow}>
-              <MaterialIcons name="person-outline" size={24} color="gray" />
+              <MaterialIcons name="person-outline" size={24} color="#075e54" />
               <TextInput
                 style={styles.input}
                 placeholder="Last Name"
                 value={lastName}
                 onChangeText={setLastName}
               />
+              <Text style={styles.indicator}>Last Name</Text>
             </View>
+
+
             <View style={styles.infoRow}>
-              <MaterialIcons name="cake" size={24} color="gray" />
+              <MaterialIcons name="person" size={24} color="#075e54" />
+              <TextInput
+                style={styles.input}
+                placeholder="Name"
+                value={name}
+                onChangeText={setName}
+              />
+               <Text style={styles.indicator}>UserName</Text>
+            </View>
+            
+            <View style={styles.infoRow}>
+              <MaterialIcons name="cake" size={24} color="#075e54" />
               <TextInput
                 style={styles.input}
                 placeholder="Birthday (YYYY-MM-DD)"
                 value={birthday}
                 onChangeText={setBirthday}
               />
+              <Text style={styles.indicator}>Birthday</Text>
             </View>
             <View style={styles.infoRow}>
-              <MaterialIcons name="phone" size={24} color="gray" />
+              <MaterialIcons name="phone" size={24} color="#075e54" />
               <TextInput
                 style={styles.input}
                 placeholder="Phone Number"
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
               />
+              <Text style={styles.indicator}>Phone</Text>
             </View>
-            <View style={styles.infoRow}>
-              <MaterialIcons name="account-circle" size={24} color="gray" />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-              />
-            </View>
+           
           </View>
-          <Button title="Update Profile" onPress={handleUpdateProfile} />
-          <Button title="Sign Out" onPress={handleSignOut} />
+          <TouchableOpacity style={styles.button} onPress={handleUpdateProfile}>
+            <Text style={styles.buttonText}>Update Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={handleSignOut}>
+            <Text style={styles.buttonText}>Sign Out</Text>
+          </TouchableOpacity>
         </>
       ) : (
-        <Text>User is not authenticated.</Text>
+        <Text style={styles.message}>User is not authenticated.</Text>
       )}
     </View>
   );
@@ -195,42 +209,41 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f0f0f0',
     padding: 20,
-    backgroundColor: '#f4f4f4',
   },
   profileSection: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: '#075e54',
   },
   cameraIcon: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 15,
+    backgroundColor: '#075e54',
+    borderRadius: 20,
     padding: 5,
   },
-  email: {
+  username: {
     marginTop: 10,
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: 'bold',
-  },
-  verified: {
-    fontSize: 14,
-    color: 'green',
+    color: '#075e54',
   },
   infoSection: {
-    marginBottom: 20,
+    marginBottom: 30,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     padding: 10,
     borderRadius: 10,
     marginBottom: 10,
@@ -247,6 +260,32 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 16,
+    color: '#075e54',
+  },
+  indicator: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#075e54',
+    opacity: 0.6,
+  },
+  button: {
+    backgroundColor: '#075e54',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    marginBottom: 10,
+    alignSelf: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  message: {
+    color: '#075e54',
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 50,
   },
 });
 

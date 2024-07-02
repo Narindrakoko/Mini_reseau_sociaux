@@ -54,30 +54,34 @@ const Feed = () => {
     }
   };
 
-
   const handleLike = async (postId) => {
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
-
+  
     onValue(postRef, (snapshot) => {
       const post = snapshot.val();
       const likes = post.likes || {};
       const postOwnerId = post.userId;
-
+  
       if (likes[user.uid]) {
         delete likes[user.uid];
       } else {
-        likes[user.uid] = user.displayName;
+        likes[user.uid] = {
+          username: user.displayName,
+          userPhotoURL: user.photoURL,
+          timestamp: Date.now(),
+        };
         createNotification(postOwnerId, 'like', {
           userId: user.uid,
           username: user.displayName,
           userPhotoURL: user.photoURL,
         });
       }
-
+  
       update(postRef, { likes });
     }, { onlyOnce: true });
   };
+  
 
   const handleComment = async (postId) => {
     const db = getDatabase();
@@ -125,8 +129,9 @@ const Feed = () => {
   };
 
   const renderPost = ({ item }) => {
-    const likeCount = item.likes ? Object.keys(item.likes).length : 0;
-    const userLiked = item.likes ? !!item.likes[user.uid] : false;
+    const likeCount = Object.values(item.likes || {}).length;
+    const userLiked = !!(item.likes && item.likes[user.uid]);
+    
     const commentCount = comments[item.id] ? comments[item.id].length : 0;
 
     return (

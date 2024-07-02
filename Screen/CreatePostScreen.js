@@ -49,6 +49,7 @@ const CreatePostScreen = ({ navigation }) => {
       createdAt: serverTimestamp(),
       username: user.displayName,
       userPhotoURL: user.photoURL,
+      userId: user.uid, // Ajouter l'ID de l'utilisateur
       imageUrl: imageUrl || null,
     };
 

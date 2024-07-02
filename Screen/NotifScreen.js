@@ -10,15 +10,22 @@ const NotifScreen = () => {
   const user = auth.currentUser;
 
   useEffect(() => {
-    const db = getDatabase();
-    const notificationsRef = ref(db, `notifications/${user.uid}`);
+    if (user) {
+      console.log('Current user:', user);
 
-    onValue(notificationsRef, (snapshot) => {
-      const data = snapshot.val();
-      const notificationsArray = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-      setNotifications(notificationsArray);
-    });
-  }, [user.uid]);
+      const db = getDatabase();
+      const notificationsRef = ref(db, `notifications/${user.uid}`);
+
+      onValue(notificationsRef, (snapshot) => {
+        const data = snapshot.val();
+        console.log('Notifications data:', data);
+        const notificationsArray = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+        setNotifications(notificationsArray);
+      });
+    } else {
+      console.error('No user is logged in');
+    }
+  }, [user]);
 
   const renderNotification = ({ item }) => {
     return (
@@ -33,10 +40,13 @@ const NotifScreen = () => {
             <Text style={styles.username}>{item.username}</Text>
             {item.type === 'like' ? ' liked your post.' : ` commented: ${item.comment}`}
           </Text>
-          {/* Afficher les données du post */}
-          <Text style={styles.postText}>{item.postData.text}</Text>
-          {item.postData.imageUrl && (
-            <Image source={{ uri: item.postData.imageUrl }} style={styles.postImage} />
+          {item.postData && (
+            <>
+              <Text style={styles.postText}>{item.postData.text}</Text>
+              {item.postData.imageUrl && (
+                <Image source={{ uri: item.postData.imageUrl }} style={styles.postImage} />
+              )}
+            </>
           )}
           <Text style={styles.timestamp}>{new Date(item.timestamp).toLocaleString()}</Text>
         </View>

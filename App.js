@@ -38,8 +38,9 @@ import FeedScreen from './Screen/FeedScreen';
 import HomeScreen from './Screen/HomeScreen';
 import RegisterScreen from './Screen/RegisterScreen';
 import ChatScreen from './Screen/ChatScreen';
-import NotifScreen from './Screen/NotifScreen';
+import NotificationsScreen from './Screen/NotificationsScreen';
 import UserList from './Screen/UserListScreen';
+import NavigationBar from './components/NavigationBar';
 
 // Initialize Firebase if not already initialized
 
@@ -54,12 +55,13 @@ const App = () => {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="users" component={UserList} />
         <Stack.Screen name="Message" component={ChatScreen} />
-        <Stack.Screen name="Notifications" component={NotifScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="CreatePost" component={CreatePostScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
 
       </Stack.Navigator>
+      <NavigationBar />
     </NavigationContainer>
   );
 };

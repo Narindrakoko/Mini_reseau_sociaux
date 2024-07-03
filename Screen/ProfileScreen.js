@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, FlatList, StyleSheet } from 'react-native';
 import { getAuth, signOut, updateProfile } from 'firebase/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -15,6 +15,8 @@ const ProfileScreen = ({ navigation }) => {
   const [birthday, setBirthday] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [username, setUsername] = useState('');
+  const [posts, setPosts] = useState([]);
+  const [photoAlbum, setPhotoAlbum] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -35,6 +37,19 @@ const ProfileScreen = ({ navigation }) => {
             phoneNumber,
             username
           });
+        }
+      });
+
+      const postsRef = dbRef(db, 'posts');
+      onValue(postsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const userPosts = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key],
+          })).filter(post => post.userId === user.uid);
+          setPosts(userPosts);
+          setPhotoAlbum(userPosts.filter(post => post.imageUrl));
         }
       });
     }
@@ -121,88 +136,141 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      {user ? (
-        <>
-          <View style={styles.profileSection}>
-            <TouchableOpacity onPress={pickImage}>
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
-              <View style={styles.cameraIcon}>
-                <Ionicons name="camera" size={24} color="white" />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.username}>{name}</Text>
-          </View>
-
-         
-          <View style={styles.infoSection}>
-          <View style={styles.infoRow}>
-              <MaterialIcons name="account-circle" size={24} color="#075e54" />
-              <TextInput
-                style={styles.input}
-                placeholder="Name"
-                value={username}
-                onChangeText={setUsername}
-              />
-              <Text style={styles.indicator}>Name</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <MaterialIcons name="person-outline" size={24} color="#075e54" />
-              <TextInput
-                style={styles.input}
-                placeholder="Last Name"
-                value={lastName}
-                onChangeText={setLastName}
-              />
-              <Text style={styles.indicator}>Last Name</Text>
-            </View>
-
-
-            <View style={styles.infoRow}>
-              <MaterialIcons name="person" size={24} color="#075e54" />
-              <TextInput
-                style={styles.input}
-                placeholder="Name"
-                value={name}
-                onChangeText={setName}
-              />
-               <Text style={styles.indicator}>UserName</Text>
-            </View>
-            
-            <View style={styles.infoRow}>
-              <MaterialIcons name="cake" size={24} color="#075e54" />
-              <TextInput
-                style={styles.input}
-                placeholder="Birthday (YYYY-MM-DD)"
-                value={birthday}
-                onChangeText={setBirthday}
-              />
-              <Text style={styles.indicator}>Birthday</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <MaterialIcons name="phone" size={24} color="#075e54" />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone Number"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-              />
-              <Text style={styles.indicator}>Phone</Text>
-            </View>
-           
-          </View>
-          <TouchableOpacity style={styles.button} onPress={handleUpdateProfile}>
-            <Text style={styles.buttonText}>Update Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <Text style={styles.message}>User is not authenticated.</Text>
-      )}
+  const renderProfileSection = () => (
+    <View style={styles.profileSection}>
+      <TouchableOpacity onPress={pickImage}>
+        <Image source={{ uri: profileImage }} style={styles.profileImage} />
+        <View style={styles.cameraIcon}>
+          <Ionicons name="camera" size={24} color="white" />
+        </View>
+      </TouchableOpacity>
+      <Text style={styles.username}>{name}</Text>
     </View>
+  );
+
+  const renderInfoSection = () => (
+    <View style={styles.infoSection}>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="account-circle" size={24} color="#075e54" />
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          value={username}
+          onChangeText={setUsername}
+        />
+        <Text style={styles.indicator}>Username</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="person-outline" size={24} color="#075e54" />
+        <TextInput
+          style={styles.input}
+          placeholder="Last Name"
+          value={lastName}
+          onChangeText={setLastName}
+        />
+        <Text style={styles.indicator}>Last Name</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="person" size={24} color="#075e54" />
+        <TextInput
+          style={styles.input}
+          placeholder="Name"
+          value={name}
+          onChangeText={setName}
+        />
+        <Text style={styles.indicator}>Name</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="cake" size={24} color="#075e54" />
+        <TextInput
+          style={styles.input}
+          placeholder="Birthday (YYYY-MM-DD)"
+          value={birthday}
+          onChangeText={setBirthday}
+        />
+        <Text style={styles.indicator}>Birthday</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <MaterialIcons name="phone" size={24} color="#075e54" />
+        <TextInput
+          style={styles.input}
+          placeholder="Phone Number"
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+        />
+        <Text style={styles.indicator}>Phone</Text>
+      </View>
+    </View>
+  );
+
+  const renderButton = (title, onPress) => (
+    <TouchableOpacity style={styles.button} onPress={onPress}>
+      <Text style={styles.buttonText}>{title}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderPhoto = ({ item }) => (
+    <Image source={{ uri: item.imageUrl }} style={styles.albumImage} />
+  );
+
+
+
+  const renderPost = ({ item }) => (
+    <View style={styles.post}>
+      <Text style={styles.postText}>{item.text}</Text>
+      {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.postImage} />}
+    </View>
+  );
+
+ 
+  return (
+    <FlatList
+      data={[{ key: 'profile' }, { key: 'info' }, { key: 'album' }, { key: 'posts' }]}
+      renderItem={({ item }) => {
+        switch (item.key) {
+          case 'profile':
+            return renderProfileSection();
+          case 'info':
+            return (
+              <>
+                {renderInfoSection()}
+                {renderButton('Update Profile', handleUpdateProfile)}
+              
+              </>
+            );
+          case 'posts':
+            return (
+              <>
+                <Text style={styles.sectionTitle}>Vos publications</Text>
+                <FlatList
+                  data={posts}
+                  renderItem={renderPost}
+                  keyExtractor={(item) => item.id}
+                  horizontal={false}
+                  style={styles.flatList}
+                />
+              </>
+            );
+          case 'album':
+            return (
+              <>
+                <Text style={styles.sectionTitle}> Album photo</Text>
+                <FlatList
+                  data={photoAlbum}
+                  renderItem={renderPhoto}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  style={styles.flatList}
+                />
+              </>
+            );
+          default:
+            return null;
+        }
+      }}
+      keyExtractor={(item) => item.key}
+      style={styles.container}
+    />
   );
 };
 
@@ -210,11 +278,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f0f0',
-    padding: 20,
   },
   profileSection: {
     alignItems: 'center',
     marginBottom: 30,
+    paddingHorizontal: 20,
   },
   profileImage: {
     width: 120,
@@ -239,6 +307,7 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     marginBottom: 30,
+    paddingHorizontal: 20,
   },
   infoRow: {
     flexDirection: 'row',
@@ -286,6 +355,48 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginTop: 50,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#075e54',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingHorizontal: 20,
+  },
+  post: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    marginHorizontal: 20,
+  },
+  postText: {
+    fontSize: 16,
+    color: '#075e54',
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  albumImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    margin: 5,
+  },
+  flatList: {
+    paddingHorizontal: 20,
   },
 });
 

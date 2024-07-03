@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { getDatabase, ref, onValue, update, push } from 'firebase/database';
+import { getDatabase, ref, onValue, update, push, remove } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -16,7 +16,7 @@ const Feed = () => {
     const db = getDatabase();
     const postsRef = ref(db, 'posts');
 
-    onValue(postsRef, (snapshot) => {
+    const unsubscribe = onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
       const postsArray = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
       setPosts(postsArray);
@@ -24,25 +24,27 @@ const Feed = () => {
         fetchComments(post.id);
       });
     });
+
+    return () => unsubscribe();
   }, []);
 
-  const fetchComments = (postId) => {
+  const fetchComments = useCallback((postId) => {
     const db = getDatabase();
     const commentsRef = ref(db, `posts/${postId}/comments`);
     onValue(commentsRef, (snapshot) => {
       const data = snapshot.val();
       const commentsArray = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
       setComments(prev => ({ ...prev, [postId]: commentsArray }));
-    });
-  };
+    }, { onlyOnce: true });
+  }, []);
 
-  const createNotification = async (postOwnerId, notificationType, notificationData) => {
+  const createNotification = useCallback(async (postOwnerId, notificationType, notificationData) => {
     const db = getDatabase();
     const notificationsRef = ref(db, `notifications/${postOwnerId}`);
     const newNotificationRef = push(notificationsRef);
 
     try {
-      if (postOwnerId !== user.uid) { // Vérifier que le propriétaire du post n'est pas l'utilisateur actuel
+      if (postOwnerId !== user.uid) {
         await update(newNotificationRef, {
           ...notificationData,
           type: notificationType,
@@ -52,17 +54,17 @@ const Feed = () => {
     } catch (error) {
       console.error('Error creating notification:', error);
     }
-  };
+  }, [user.uid]);
 
-  const handleLike = async (postId) => {
+  const handleLike = useCallback(async (postId) => {
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
-  
+
     onValue(postRef, (snapshot) => {
       const post = snapshot.val();
       const likes = post.likes || {};
       const postOwnerId = post.userId;
-  
+
       if (likes[user.uid]) {
         delete likes[user.uid];
       } else {
@@ -77,12 +79,12 @@ const Feed = () => {
           userPhotoURL: user.photoURL,
         });
       }
-  
+
       update(postRef, { likes });
     }, { onlyOnce: true });
-  };
+  }, [createNotification, user.uid, user.displayName, user.photoURL]);
 
-  const handleLaugh = async (postId) => {
+  const handleLaugh = useCallback(async (postId) => {
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
 
@@ -108,9 +110,9 @@ const Feed = () => {
 
       update(postRef, { laughs });
     }, { onlyOnce: true });
-  };
+  }, [createNotification, user.uid, user.displayName, user.photoURL]);
 
-  const handleComment = async (postId) => {
+  const handleComment = useCallback(async (postId) => {
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
     const commentTextValue = commentText[postId];
@@ -149,9 +151,9 @@ const Feed = () => {
     } catch (error) {
       console.error('Error commenting on post:', error);
     }
-  };
+  }, [commentText, createNotification, user.uid, user.displayName, user.photoURL]);
 
-  const handleShare = async (postId) => {
+  const handleShare = useCallback(async (postId) => {
     const db = getDatabase();
     const postsRef = ref(db, 'posts');
     const postRef = ref(db, `posts/${postId}`);
@@ -180,13 +182,23 @@ const Feed = () => {
 
       Alert.alert('Post shared!');
     }, { onlyOnce: true });
-  };
+  }, [createNotification, user.uid, user.displayName, user.photoURL]);
 
-  const toggleComments = (postId) => {
+  const toggleComments = useCallback((postId) => {
     setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
-  };
+  }, []);
 
-  const renderPost = ({ item }) => {
+  const handleDeleteComment = useCallback(async (postId, commentId) => {
+    const db = getDatabase();
+    const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
+    try {
+      await remove(commentRef);
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  }, []);
+
+  const renderPost = useCallback(({ item }) => {
     const likeCount = Object.values(item.likes || {}).length;
     const userLiked = !!(item.likes && item.likes[user.uid]);
     
@@ -215,7 +227,7 @@ const Feed = () => {
             ) : (
               <MaterialIcons name="person" size={20} color="gray" />
             )}
-            <Text style={styles.sharedByText}>Shared by {item.sharedBy.username}</Text>
+            <Text style={styles.sharedByText}> {item.sharedBy.username} a partager cette publication</Text>
           </View>
         )}
         {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.postImage} />}
@@ -249,6 +261,11 @@ const Feed = () => {
                 <View style={styles.commentTextContainer}>
                   <Text style={styles.commentUsername}>{comment.username}</Text>
                   <Text style={styles.commentText}>{comment.text}</Text>
+                  {comment.userId === user.uid && (
+                    <TouchableOpacity onPress={() => handleDeleteComment(item.id, comment.id)}>
+                      <MaterialIcons name="delete" size={20} color="red" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             ))}
@@ -267,7 +284,7 @@ const Feed = () => {
         )}
       </View>
     );
-  };
+  }, [comments, handleComment, handleDeleteComment, handleLaugh, handleLike, handleShare, showComments, toggleComments, user.uid]);
 
   return (
     <FlatList

@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { auth, database } from '../firebaseConfig';
 import { ref, onValue } from 'firebase/database';
+import { Ionicons } from '@expo/vector-icons';
 import { Badge } from 'react-native-elements'; // Importation du composant Badge de react-native-elements
 
 const NavigationBar = () => {
@@ -82,6 +83,9 @@ const NavigationBar = () => {
           containerStyle={{ position: 'absolute', top: -6, right: -10 }}
         />
         <Icon name="bell" size={24} color="white" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+      <Ionicons name="settings" size={24} color="white" />
       </TouchableOpacity>
     </View>
   );

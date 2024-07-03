@@ -13,6 +13,7 @@ import ChatScreen from './Screen/ChatScreen';
 import NotificationsScreen from './Screen/NotificationsScreen';
 import UserList from './Screen/UserListScreen';
 import NavigationBar from './components/NavigationBar';
+import SettingsScreen from './Screen/SettingsScreen';
 
 const Stack = createStackNavigator();
 
@@ -45,6 +46,7 @@ const App = () => {
             <Stack.Screen name="Auth" component={AuthScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="users" component={UserList} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="Message" component={ChatScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />

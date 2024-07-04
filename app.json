@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/resaka.jpeg",
+      "image": "./assets/back1.jpeg",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },

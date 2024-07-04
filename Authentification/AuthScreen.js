@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ImageBackground } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,17 +10,21 @@ const AuthScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // État de chargement
 
   const handleAuth = () => {
+    setIsLoading(true); // Démarrer le chargement
     const auth = getAuth();
 
     if (isLogin) {
       signInWithEmailAndPassword(auth, email, password)
         .then(userCredential => {
           console.log('Logged in:', userCredential.user);
+          setIsLoading(false); // Arrêter le chargement
           navigation.navigate('Home');
         })
         .catch(error => {
+          setIsLoading(false); // Arrêter le chargement
           setError('Error logging in: ' + error.message);
           console.error('Error logging in:', error);
         });
@@ -33,13 +37,16 @@ const AuthScreen = ({ navigation }) => {
             displayName: username,
           }).then(() => {
             console.log('Registered and profile updated:', user);
+            setIsLoading(false); // Arrêter le chargement
             navigation.navigate('Home');
           }).catch(error => {
+            setIsLoading(false); // Arrêter le chargement
             setError('Error updating profile: ' + error.message);
             console.error('Error updating profile:', error);
           });
         })
         .catch(error => {
+          setIsLoading(false); // Arrêter le chargement
           setError('Error registering: ' + error.message);
           console.error('Error registering:', error);
         });
@@ -55,50 +62,56 @@ const AuthScreen = ({ navigation }) => {
         colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.3)']}
         style={styles.container}
       >
-        <View style={styles.inputContainer}>
-          {!isLogin && (
-            <View style={styles.inputWrapper}>
-              <Ionicons name="person-outline" size={24} color="#fff" />
-              <TextInput
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-                style={styles.input}
-                placeholderTextColor="#fff"
-              />
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#fff" /> // Afficher l'animation de chargement
+        ) : (
+          <>
+            <View style={styles.inputContainer}>
+              {!isLogin && (
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={24} color="#fff" />
+                  <TextInput
+                    placeholder="Username"
+                    value={username}
+                    onChangeText={setUsername}
+                    style={styles.input}
+                    placeholderTextColor="#fff"
+                  />
+                </View>
+              )}
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={24} color="#fff" />
+                <TextInput
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  style={styles.input}
+                  placeholderTextColor="#fff"
+                />
+              </View>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={24} color="#fff" />
+                <TextInput
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  style={styles.input}
+                  placeholderTextColor="#fff"
+                />
+              </View>
             </View>
-          )}
-          <View style={styles.inputWrapper}>
-            <Ionicons name="mail-outline" size={24} color="#fff" />
-            <TextInput
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              style={styles.input}
-              placeholderTextColor="#fff"
-            />
-          </View>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={24} color="#fff" />
-            <TextInput
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              style={styles.input}
-              placeholderTextColor="#fff"
-            />
-          </View>
-        </View>
-        <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
-          <Text style={styles.authButtonText}>{isLogin ? 'Login' : 'Register'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
-          <Text style={styles.toggleText}>
-            {isLogin ? "Don't have an account? Register" : 'Have an account? Login'}
-          </Text>
-        </TouchableOpacity>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
+              <Text style={styles.authButtonText}>{isLogin ? 'Login' : 'Register'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
+              <Text style={styles.toggleText}>
+                {isLogin ? "Don't have an account? Register" : 'Have an account? Login'}
+              </Text>
+            </TouchableOpacity>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          </>
+        )}
       </LinearGradient>
     </ImageBackground>
   );

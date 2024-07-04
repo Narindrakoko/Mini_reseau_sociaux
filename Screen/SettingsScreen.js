@@ -30,7 +30,7 @@ const SettingsScreen = () => {
         <Text style={styles.buttonText}>Messages</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleSignOut}>
+      <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleSignOut}>
         <Text style={styles.buttonText}>Déconnexion</Text>
       </TouchableOpacity>
     </View>
@@ -46,10 +46,14 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#007AFF',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 8,
     marginVertical: 8,
+    elevation: 4, // Ajoute une ombre pour un effet plus moderne
+  },
+  logoutButton: {
+    backgroundColor: '#FF3B30', // Couleur différente pour le bouton de déconnexion
   },
   buttonText: {
     color: '#fff',

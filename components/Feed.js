@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, TextInput, Alert, Animated } from 'react-native';
 import { getDatabase, ref, onValue, update, push, remove } from 'firebase/database';
+import {  ref as dbRef} from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -9,6 +10,8 @@ const Feed = () => {
   const [comments, setComments] = useState({});
   const [commentText, setCommentText] = useState({});
   const [showComments, setShowComments] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -16,19 +19,36 @@ const Feed = () => {
     const db = getDatabase();
     const postsRef = ref(db, 'posts');
 
-    const unsubscribe = onValue(postsRef, (snapshot) => {
+    onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
       const postsArray = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
       setPosts(postsArray);
-      postsArray.forEach((post) => {
-        fetchComments(post.id);
-      });
     });
-
-    return () => unsubscribe();
   }, []);
 
-  const fetchComments = useCallback((postId) => {
+
+
+
+  useEffect(() => {
+    const db = getDatabase();
+    const postsRef = dbRef(db, 'posts');
+
+    onValue(postsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const postList = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setPosts(postList);
+      }
+    });
+  }, []);
+
+ 
+
+
+  const fetchComments = (postId) => {
     const db = getDatabase();
     const commentsRef = ref(db, `posts/${postId}/comments`);
     onValue(commentsRef, (snapshot) => {
@@ -36,15 +56,15 @@ const Feed = () => {
       const commentsArray = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
       setComments(prev => ({ ...prev, [postId]: commentsArray }));
     }, { onlyOnce: true });
-  }, []);
+  };
 
-  const createNotification = useCallback(async (postOwnerId, notificationType, notificationData) => {
+  const createNotification = async (postOwnerId, notificationType, notificationData) => {
     const db = getDatabase();
     const notificationsRef = ref(db, `notifications/${postOwnerId}`);
     const newNotificationRef = push(notificationsRef);
 
     try {
-      if (postOwnerId !== user.uid) {
+      if (postOwnerId !== user.uid) { // Vérifier que le propriétaire du post n'est pas l'utilisateur actuel
         await update(newNotificationRef, {
           ...notificationData,
           type: notificationType,
@@ -54,65 +74,80 @@ const Feed = () => {
     } catch (error) {
       console.error('Error creating notification:', error);
     }
-  }, [user.uid]);
+  };
 
-  const handleLike = useCallback(async (postId) => {
+  const handleLike = async (postId) => {
+    setLoading(true);
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
 
-    onValue(postRef, (snapshot) => {
-      const post = snapshot.val();
-      const likes = post.likes || {};
-      const postOwnerId = post.userId;
+    try {
+      onValue(postRef, (snapshot) => {
+        const post = snapshot.val();
+        const likes = post.likes || {};
+        const postOwnerId = post.userId;
 
-      if (likes[user.uid]) {
-        delete likes[user.uid];
-      } else {
-        likes[user.uid] = {
-          username: user.displayName,
-          userPhotoURL: user.photoURL,
-          timestamp: Date.now(),
-        };
-        createNotification(postOwnerId, 'like', {
-          userId: user.uid,
-          username: user.displayName,
-          userPhotoURL: user.photoURL,
-        });
-      }
+        if (likes[user.uid]) {
+          delete likes[user.uid];
+        } else {
+          likes[user.uid] = {
+            username: user.displayName,
+            userPhotoURL: user.photoURL,
+            timestamp: Date.now(),
+          };
+          createNotification(postOwnerId, 'like', {
+            userId: user.uid,
+            username: user.displayName,
+            userPhotoURL: user.photoURL,
+          });
+        }
 
-      update(postRef, { likes });
-    }, { onlyOnce: true });
-  }, [createNotification, user.uid, user.displayName, user.photoURL]);
+        update(postRef, { likes });
+      }, { onlyOnce: true });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleLaugh = useCallback(async (postId) => {
+  const handleLaugh = async (postId) => {
+    setLoading(true);
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
 
-    onValue(postRef, (snapshot) => {
-      const post = snapshot.val();
-      const laughs = post.laughs || {};
-      const postOwnerId = post.userId;
+    try {
+      onValue(postRef, (snapshot) => {
+        const post = snapshot.val();
+        const laughs = post.laughs || {};
+        const postOwnerId = post.userId;
 
-      if (laughs[user.uid]) {
-        delete laughs[user.uid];
-      } else {
-        laughs[user.uid] = {
-          username: user.displayName,
-          userPhotoURL: user.photoURL,
-          timestamp: Date.now(),
-        };
-        createNotification(postOwnerId, 'laugh', {
-          userId: user.uid,
-          username: user.displayName,
-          userPhotoURL: user.photoURL,
-        });
-      }
+        if (laughs[user.uid]) {
+          delete laughs[user.uid];
+        } else {
+          laughs[user.uid] = {
+            username: user.displayName,
+            userPhotoURL: user.photoURL,
+            timestamp: Date.now(),
+          };
+          createNotification(postOwnerId, 'laugh', {
+            userId: user.uid,
+            username: user.displayName,
+            userPhotoURL: user.photoURL,
+          });
+        }
 
-      update(postRef, { laughs });
-    }, { onlyOnce: true });
-  }, [createNotification, user.uid, user.displayName, user.photoURL]);
+        update(postRef, { laughs });
+      }, { onlyOnce: true });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleComment = useCallback(async (postId) => {
+  const handleComment = async (postId) => {
+    setLoading(true);
     const db = getDatabase();
     const postRef = ref(db, `posts/${postId}`);
     const commentTextValue = commentText[postId];
@@ -149,46 +184,13 @@ const Feed = () => {
         }
       }, { onlyOnce: true });
     } catch (error) {
-      console.error('Error commenting on post:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
-  }, [commentText, createNotification, user.uid, user.displayName, user.photoURL]);
+  };
 
-  const handleShare = useCallback(async (postId) => {
-    const db = getDatabase();
-    const postsRef = ref(db, 'posts');
-    const postRef = ref(db, `posts/${postId}`);
-
-    onValue(postRef, async (snapshot) => {
-      const post = snapshot.val();
-
-      const sharedPost = {
-        ...post,
-        sharedBy: {
-          userId: user.uid,
-          username: user.displayName,
-          userPhotoURL: user.photoURL,
-          timestamp: Date.now(),
-        }
-      };
-
-      await push(postsRef, sharedPost);
-
-      createNotification(post.userId, 'share', {
-        userId: user.uid,
-        username: user.displayName,
-        userPhotoURL: user.photoURL,
-        postId: postId,
-      });
-
-      Alert.alert('Post shared!');
-    }, { onlyOnce: true });
-  }, [createNotification, user.uid, user.displayName, user.photoURL]);
-
-  const toggleComments = useCallback((postId) => {
-    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
-  }, []);
-
-  const handleDeleteComment = useCallback(async (postId, commentId) => {
+  const handleDeleteComment = async (postId, commentId) => {
     const db = getDatabase();
     const commentRef = ref(db, `posts/${postId}/comments/${commentId}`);
     try {
@@ -196,9 +198,56 @@ const Feed = () => {
     } catch (error) {
       console.error('Error deleting comment:', error);
     }
-  }, []);
+  };
 
-  const renderPost = useCallback(({ item }) => {
+  const handleShare = async (postId) => {
+    setLoading(true);
+    const db = getDatabase();
+    const postsRef = ref(db, 'posts');
+    const postRef = ref(db, `posts/${postId}`);
+
+    try {
+      onValue(postRef, async (snapshot) => {
+        const post = snapshot.val();
+
+        const sharedPost = {
+          ...post,
+          sharedBy: {
+            userId: user.uid,
+            username: user.displayName,
+            userPhotoURL: user.photoURL,
+            timestamp: Date.now(),
+          }
+        };
+
+        await push(postsRef, sharedPost);
+
+        createNotification(post.userId, 'share', {
+          userId: user.uid,
+          username: user.displayName,
+          userPhotoURL: user.photoURL,
+          postId: postId,
+        });
+
+        Alert.alert('Post shared!');
+      }, { onlyOnce: true });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleComments = (postId) => {
+    setShowComments(prev => {
+      if (!prev[postId]) {
+        fetchComments(postId);
+      }
+      return { ...prev, [postId]: !prev[postId] };
+    });
+  };
+
+  const renderPost = ({ item }) => {
     const likeCount = Object.values(item.likes || {}).length;
     const userLiked = !!(item.likes && item.likes[user.uid]);
     
@@ -227,7 +276,7 @@ const Feed = () => {
             ) : (
               <MaterialIcons name="person" size={20} color="gray" />
             )}
-            <Text style={styles.sharedByText}> {item.sharedBy.username} a partager cette publication</Text>
+            <Text style={styles.sharedByText}>Shared by {item.sharedBy.username}</Text>
           </View>
         )}
         {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.postImage} />}
@@ -250,7 +299,7 @@ const Feed = () => {
           </TouchableOpacity>
         </View>
         {showComments[item.id] && (
-          <View style={styles.commentsSection}>
+          <>
             {comments[item.id] && comments[item.id].map((comment) => (
               <View key={comment.id} style={styles.comment}>
                 {comment.userPhotoURL ? (
@@ -269,39 +318,46 @@ const Feed = () => {
                 </View>
               </View>
             ))}
-            <View style={styles.commentInput}>
+            <View style={styles.commentInputContainer}>
               <TextInput
-                style={styles.commentInputField}
+                style={styles.commentInput}
                 placeholder="Add a comment..."
                 value={commentText[item.id] || ''}
                 onChangeText={(text) => setCommentText(prev => ({ ...prev, [item.id]: text }))}
               />
-              <TouchableOpacity onPress={() => handleComment(item.id)}>
-                <MaterialIcons name="send" size={24} color="blue" />
+              <TouchableOpacity style={styles.commentButton} onPress={() => handleComment(item.id)}>
+                <MaterialIcons name="send" size={20} color="blue" />
               </TouchableOpacity>
             </View>
-          </View>
+          </>
         )}
       </View>
     );
-  }, [comments, handleComment, handleDeleteComment, handleLaugh, handleLike, handleShare, showComments, toggleComments, user.uid]);
+  };
 
   return (
     <FlatList
       data={posts}
-      renderItem={renderPost}
       keyExtractor={(item) => item.id}
+      renderItem={renderPost}
+      contentContainerStyle={styles.container}
     />
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    padding: 10,
+  },
   post: {
     backgroundColor: '#fff',
+    borderRadius: 8,
     padding: 15,
-    marginVertical: 8,
-    marginHorizontal: 16,
-    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 1,
     elevation: 2,
   },
   postHeader: {
@@ -322,7 +378,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   createdAt: {
-    fontSize: 12,
+    color: 'gray',
+  },
+  sharedBy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sharedByImage: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 5,
+  },
+  sharedByText: {
     color: 'gray',
   },
   postImage: {
@@ -332,12 +401,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   postText: {
-    fontSize: 16,
     marginBottom: 10,
   },
   reactions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    marginBottom: 10,
   },
   reactionButton: {
     flexDirection: 'row',
@@ -352,28 +421,9 @@ const styles = StyleSheet.create({
   laughedText: {
     color: 'yellow',
   },
-  sharedBy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 5,
-  },
-  sharedByText: {
-    marginLeft: 5,
-    color: 'gray',
-    fontStyle: 'italic',
-  },
-  sharedByImage: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 5,
-  },
-  commentsSection: {
-    marginTop: 10,
-  },
   comment: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 10,
   },
   commentUserImage: {
@@ -389,20 +439,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   commentText: {
-    fontSize: 14,
+    marginBottom: 5,
   },
-  commentInput: {
+  commentInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
   },
-  commentInputField: {
+  commentInput: {
     flex: 1,
-    height: 40,
     borderColor: 'gray',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 20,
     paddingHorizontal: 10,
+    marginRight: 10,
+  },
+  commentButton: {
+    padding: 5,
   },
 });
 

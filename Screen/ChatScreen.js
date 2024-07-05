@@ -1,56 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { Audio } from 'expo-av';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, database } from '../firebaseConfig';
-import { ref, push, onValue, get, set, child, update } from 'firebase/database';
+import { ref, push, onValue, get, set, child, update, remove } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
-
-const UserList = ({ navigation }) => {
-  const [users, setUsers] = useState([]);
-  const currentUser = auth.currentUser;
-
-  useEffect(() => {
-    const usersRef = ref(database, 'users');
-    get(usersRef).then((snapshot) => {
-      const usersData = snapshot.val();
-      if (usersData) {
-        const usersList = Object.entries(usersData).map(([key, value]) => ({
-          id: key,
-          name: value.displayName,
-          photoURL: value.photoURL,
-        }));
-        setUsers(usersList);
-      }
-    });
-  }, []);
-
-  const handleUserSelect = (user) => {
-    navigation.navigate('Chat', { user });
-  };
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.userList}>
-        <Text style={styles.title}>Choisir un destinataire :</Text>
-        {users.map((user) => (
-          <TouchableOpacity
-            key={user.id}
-            style={styles.userItem}
-            onPress={() => handleUserSelect(user)}
-          >
-            <Image source={{ uri: user.photoURL }} style={styles.userAvatar} />
-            <Text style={styles.username}>{user.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-};
 
 const ChatScreen = ({ navigation, route }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
+  const [recording, setRecording] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
   const currentUser = auth.currentUser;
   const selectedUser = route.params?.user;
+  const storage = getStorage();
+  const audioPlayer = useRef(null);
 
   useEffect(() => {
     if (selectedUser) {
@@ -63,22 +27,13 @@ const ChatScreen = ({ navigation, route }) => {
           const messageList = Object.entries(data).map(([key, value]) => ({
             id: key,
             content: value.content,
+            audioURL: value.audioURL || null,
             sender: value.sender,
             receiverId: value.receiverId,
             timestamp: value.timestamp,
             read: value.read,
-          }));
+          })).sort((a, b) => a.timestamp - b.timestamp);
           setMessages(messageList);
-
-          // Marquer les mesages comme lus pour l'utilisateur actuel
-          messageList.forEach((message) => {
-            if (message.receiverId === currentUser.uid && !message.read[currentUser.uid]) {
-              const messageRef = child(messagesRef, message.id);
-              update(messageRef, {
-                [`read/${currentUser.uid}`]: true,
-              });
-            }
-          });
         } else {
           setMessages([]);
         }
@@ -104,17 +59,96 @@ const ChatScreen = ({ navigation, route }) => {
       };
       set(newMessageRef, newMessageData);
   
-      // Stocker une copie du message envoyé pour l'utilisateur actuel
-      const userMessageRef = ref(database, `userMessages/${currentUser.uid}`);
-      set(userMessageRef, newMessageData);
-  
       setMessage('');
     }
   };
-  
 
-  const getChatId = (userId1, userId2) => {
-    return [userId1, userId2].sort().join('-');
+  const getChatId = (userId1, userId2) => [userId1, userId2].sort().join('-');
+
+  const startRecording = async () => {
+    try {
+      if (recording) {
+        console.warn('Already recording, stopping the current recording first.');
+        await stopRecording();
+      }
+
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') throw new Error('Permission to access microphone is required');
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+      );
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Failed to start recording', error);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecording(null);
+        setIsRecording(false);
+        await uploadAudio(uri);
+      } catch (error) {
+        console.error('Failed to stop recording', error);
+      }
+    }
+  };
+
+  const uploadAudio = async (uri) => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const audioRef = storageRef(storage, `audioMessages/${Date.now()}.m4a`);
+      await uploadBytes(audioRef, blob);
+
+      const downloadURL = await getDownloadURL(audioRef);
+      sendAudioMessage(downloadURL);
+    } catch (error) {
+      console.error('Failed to upload audio', error);
+    }
+  };
+
+  const sendAudioMessage = (audioURL) => {
+    if (audioURL && selectedUser) {
+      const chatId = getChatId(currentUser.uid, selectedUser.id);
+      const newMessageRef = push(ref(database, `messages/${chatId}`));
+      const newMessageData = {
+        content: '',
+        audioURL: audioURL,
+        sender: currentUser.uid,
+        receiverId: selectedUser.id,
+        timestamp: Date.now(),
+        read: {
+          [currentUser.uid]: true,
+          [selectedUser.id]: false,
+        },
+      };
+      set(newMessageRef, newMessageData);
+    }
+  };
+
+  const playAudio = async (audioURL) => {
+    try {
+      if (audioPlayer.current) {
+        await audioPlayer.current.unloadAsync();
+      }
+
+      const { sound } = await Audio.Sound.createAsync({ uri: audioURL });
+      audioPlayer.current = sound;
+      await sound.playAsync();
+    } catch (error) {
+      console.error('Failed to play audio', error);
+    }
   };
 
   return (
@@ -131,27 +165,49 @@ const ChatScreen = ({ navigation, route }) => {
           <Text style={styles.noMessageText}>Aucun message pour l'instant</Text>
         ) : (
           <FlatList
-  data={messages}
-  keyExtractor={(item) => item.id}
-  renderItem={({ item }) => (
-    <View
-      style={[
-        styles.messageContainer,
-        item.sender === currentUser.uid ? styles.sentMessage : styles.receivedMessage,
-      ]}
-    >
-      <Text style={styles.messageText}>{item.content}</Text>
-      {item.sender === currentUser.uid && (
-        <Text style={styles.senderIndicator}>vous</Text>
-      )}
-    </View>
-  )}
-  contentContainerStyle={styles.messageList}
-  inverted
-/>
-
+            data={messages.reverse()} // Inverse l'ordre des messages pour afficher les plus récents en bas
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.messageContainer,
+                  item.sender === currentUser.uid ? styles.sentMessage : styles.receivedMessage,
+                ]}
+              >
+                {item.content ? (
+                  <Text style={styles.messageText}>{item.content}</Text>
+                ) : (
+                  <TouchableOpacity onPress={() => playAudio(item.audioURL)}>
+                    <Text style={styles.audioMessageText}>Message Audio</Text>
+                  </TouchableOpacity>
+                )}
+                {item.sender === currentUser.uid && (
+                  <Text style={styles.senderIndicator}>vous</Text>
+                )}
+                {item.sender === currentUser.uid && (
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => deleteMessage(item.id)}
+                  >
+                    <Ionicons name="trash-bin-outline" size={24} color="#888" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            contentContainerStyle={styles.messageList}
+            inverted // Inverser l'ordre des messages ici
+          />
         )}
         <View style={styles.inputContainer}>
+          {isRecording ? (
+            <TouchableOpacity style={styles.recordingButton} onPress={stopRecording}>
+              <Text style={styles.recordingButtonText}>Arrêter l'enregistrement</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.audioButton} onPressIn={startRecording}>
+              <Ionicons name="mic" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
           <TextInput
             style={styles.input}
             value={message}
@@ -215,8 +271,12 @@ const styles = StyleSheet.create({
   },
   messageList: {
     padding: 10,
+    flexGrow: 1, // Pour que la liste s'étende et puisse scroller
+    justifyContent: 'flex-end', // Met les messages en bas
   },
   messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 10,
     borderRadius: 10,
     marginVertical: 5,
@@ -232,6 +292,10 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: '#333',
+  },
+  audioMessageText: {
+    color: '#007bff',
+    textDecorationLine: 'underline',
   },
   noMessageText: {
     color: '#888',
@@ -259,10 +323,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#075e54',
     padding: 10,
     borderRadius: 20,
+    marginRight: 5,
   },
   sendButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  audioButton: {
+    backgroundColor: '#075e54',
+    padding: 10,
+    borderRadius: 20,
+  },
+  recordingButton: {
+    backgroundColor: '#ff3b30',
+    padding: 10,
+    borderRadius: 20,
+  },
+  recordingButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    marginLeft: 10,
   },
   senderIndicator: {
     fontSize: 12,

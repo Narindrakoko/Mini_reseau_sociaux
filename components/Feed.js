@@ -4,6 +4,8 @@ import { getDatabase, ref, onValue, update, push, remove } from 'firebase/databa
 import {  ref as dbRef} from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
@@ -14,6 +16,12 @@ const Feed = () => {
   const [error, setError] = useState(null);
   const auth = getAuth();
   const user = auth.currentUser;
+  const navigation = useNavigation();
+
+  const goToUserProfile = (userId) => {
+    navigation.navigate('Profile2', { userId });
+  };
+  
 
   useEffect(() => {
     const db = getDatabase();
@@ -253,9 +261,9 @@ const Feed = () => {
     
     const laughCount = Object.values(item.laughs || {}).length;
     const userLaughed = !!(item.laughs && item.laughs[user.uid]);
-
+  
     const commentCount = comments[item.id] ? comments[item.id].length : 0;
-
+  
     return (
       <View style={styles.post}>
         <View style={styles.postHeader}>
@@ -265,7 +273,9 @@ const Feed = () => {
             <MaterialIcons name="person" size={40} color="gray" />
           )}
           <View style={styles.postInfo}>
-            <Text style={styles.username}>{item.username || 'Unknown User'}</Text>
+            <TouchableOpacity onPress={() => goToUserProfile(item.userId)}>
+              <Text style={styles.username}>{item.username || 'Unknown User'}</Text>
+            </TouchableOpacity>
             <Text style={styles.createdAt}>{new Date(item.createdAt).toLocaleString()}</Text>
           </View>
         </View>
@@ -276,7 +286,9 @@ const Feed = () => {
             ) : (
               <MaterialIcons name="person" size={20} color="gray" />
             )}
-            <Text style={styles.sharedByText}>Shared by {item.sharedBy.username}</Text>
+            <TouchableOpacity onPress={() => goToUserProfile(item.sharedBy.userId)}>
+              <Text style={styles.sharedByText}>Shared by {item.sharedBy.username}</Text>
+            </TouchableOpacity>
           </View>
         )}
         {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.postImage} />}
@@ -308,7 +320,9 @@ const Feed = () => {
                   <MaterialIcons name="person" size={30} color="gray" />
                 )}
                 <View style={styles.commentTextContainer}>
-                  <Text style={styles.commentUsername}>{comment.username}</Text>
+                  <TouchableOpacity onPress={() => goToUserProfile(comment.userId)}>
+                    <Text style={styles.commentUsername}>{comment.username}</Text>
+                  </TouchableOpacity>
                   <Text style={styles.commentText}>{comment.text}</Text>
                   {comment.userId === user.uid && (
                     <TouchableOpacity onPress={() => handleDeleteComment(item.id, comment.id)}>
@@ -334,6 +348,7 @@ const Feed = () => {
       </View>
     );
   };
+  
 
   return (
     <FlatList

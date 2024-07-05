@@ -55,7 +55,7 @@ const AuthScreen = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../assets/back.jpg')}
+      source={require('../assets/back1.jpeg')}
       style={styles.backgroundImage}
     >
       <LinearGradient

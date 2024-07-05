@@ -6,7 +6,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AuthScreen from './Authentification/AuthScreen';
 import ProfileScreen from './Screen/ProfileScreen';
 import CreatePostScreen from './Screen/CreatePostScreen';
-import FeedScreen from './Screen/FeedScreen';
+import ProfileScreen2 from './Screen/Profile';
 import HomeScreen from './Screen/HomeScreen';
 import RegisterScreen from './Screen/RegisterScreen';
 import ChatScreen from './Screen/ChatScreen';
@@ -14,6 +14,7 @@ import NotificationsScreen from './Screen/NotificationsScreen';
 import UserList from './Screen/UserListScreen';
 import NavigationBar from './components/NavigationBar';
 import SettingsScreen from './Screen/SettingsScreen';
+import ChangePasswordScreen from './Screen/ChangePasswordScreen';
 
 
 const Stack = createStackNavigator();
@@ -51,7 +52,9 @@ const App = () => {
             <Stack.Screen name="Message" component={ChatScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="Profile2" component={ProfileScreen2} />
             <Stack.Screen name="CreatePost" component={CreatePostScreen} />
+            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
           </Stack.Navigator>
         </View>

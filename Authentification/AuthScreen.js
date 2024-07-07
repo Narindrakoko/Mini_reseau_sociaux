@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, ImageBackground, ActivityIndicator, Alert } from 'react-native';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -10,21 +10,21 @@ const AuthScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // État de chargement
+  const [isLoading, setIsLoading] = useState(false); 
 
   const handleAuth = () => {
-    setIsLoading(true); // Démarrer le chargement
+    setIsLoading(true);
     const auth = getAuth();
 
     if (isLogin) {
       signInWithEmailAndPassword(auth, email, password)
         .then(userCredential => {
           console.log('Logged in:', userCredential.user);
-          setIsLoading(false); // Arrêter le chargement
+          setIsLoading(false);
           navigation.navigate('Home');
         })
         .catch(error => {
-          setIsLoading(false); // Arrêter le chargement
+          setIsLoading(false);
           setError('Error logging in: ' + error.message);
           console.error('Error logging in:', error);
         });
@@ -32,38 +32,47 @@ const AuthScreen = ({ navigation }) => {
       createUserWithEmailAndPassword(auth, email, password)
         .then(userCredential => {
           const user = userCredential.user;
-
-          updateProfile(user, {
-            displayName: username,
-          }).then(() => {
-            console.log('Registered and profile updated:', user);
-            setIsLoading(false); // Arrêter le chargement
-            navigation.navigate('Home');
-          }).catch(error => {
-            setIsLoading(false); // Arrêter le chargement
-            setError('Error updating profile: ' + error.message);
-            console.error('Error updating profile:', error);
-          });
+          updateProfile(user, { displayName: username })
+            .then(() => {
+              console.log('Registered and profile updated:', user);
+              setIsLoading(false);
+              navigation.navigate('Home');
+            })
+            .catch(error => {
+              setIsLoading(false);
+              setError('Error updating profile: ' + error.message);
+              console.error('Error updating profile:', error);
+            });
         })
         .catch(error => {
-          setIsLoading(false); // Arrêter le chargement
+          setIsLoading(false);
           setError('Error registering: ' + error.message);
           console.error('Error registering:', error);
         });
     }
   };
 
+  const handlePasswordReset = () => {
+    if (!email) {
+      Alert.alert('Email Requise', 'Veillez entrer votre adresse email.');
+      return;
+    }
+
+    const auth = getAuth();
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+        Alert.alert('Changement de Mot de passe', 'le lien de réinitialisation de mot de passe a été envoyé à votre adresse email.');
+      })
+      .catch(error => {
+        Alert.alert('Error', error.message);
+      });
+  };
+
   return (
-    <ImageBackground
-      source={require('../assets/back1.jpeg')}
-      style={styles.backgroundImage}
-    >
-      <LinearGradient
-        colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.3)']}
-        style={styles.container}
-      >
+    <ImageBackground source={require('../assets/back1.jpeg')} style={styles.backgroundImage}>
+      <LinearGradient colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.3)']} style={styles.container}>
         {isLoading ? (
-          <ActivityIndicator size="large" color="#fff" /> // Afficher l'animation de chargement
+          <ActivityIndicator size="large" color="#fff" />
         ) : (
           <>
             <View style={styles.inputContainer}>
@@ -100,13 +109,26 @@ const AuthScreen = ({ navigation }) => {
                   placeholderTextColor="#fff"
                 />
               </View>
+
+              {isLogin && (
+              <TouchableOpacity onPress={handlePasswordReset}>
+                <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
+            )}
+
+
+
             </View>
+
+
+           
             <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
-              <Text style={styles.authButtonText}>{isLogin ? 'Login' : 'Register'}</Text>
+              <Text style={styles.authButtonText}>{isLogin ? 'Connexion' : 'Enregistré'}</Text>
             </TouchableOpacity>
+           
             <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
               <Text style={styles.toggleText}>
-                {isLogin ? "Don't have an account? Register" : 'Have an account? Login'}
+                {isLogin ? "Créer un compte" : 'Se connecté'}
               </Text>
             </TouchableOpacity>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -140,6 +162,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 16,
+
+ 
   },
   input: {
     flex: 1,
@@ -151,15 +175,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 24,
-  },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+    marginTop: 50,
+    width: '80%',
+      },
   authButtonText: {
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
   },
   toggleText: {
     color: '#fff',
     marginTop: 12,
     textAlign: 'center',
+  },
+  forgotPasswordText: {
+    color: '#fff',
+    marginTop: 8,
+    textAlign: 'right',
+    textDecorationLine: 'underline',
   },
   errorText: {
     color: '#ff3333',

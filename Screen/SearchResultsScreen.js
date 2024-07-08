@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, TextInput } from 'react-native';
 import { getDatabase, ref, get } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const SearchResultsScreen = ({ route }) => {
-  const { searchTerm } = route.params;
-  const [searchResults, setSearchResults] = useState([]);
+  const searchTerm = route.params?.searchTerm || '';
+  const [searchResults, setSearchResults] = useState({ users: [], posts: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(searchTerm);
   const auth = getAuth();
   const navigation = useNavigation();
 
@@ -17,31 +18,39 @@ const SearchResultsScreen = ({ route }) => {
     const fetchSearchResults = async () => {
       setLoading(true);
       const db = getDatabase();
+      const usersRef = ref(db, 'users');
       const postsRef = ref(db, 'posts');
 
       try {
-        const snapshot = await get(postsRef);
-        const data = snapshot.val();
-        console.log('Fetched data:', data);
+        const [usersSnapshot, postsSnapshot] = await Promise.all([get(usersRef), get(postsRef)]);
+        const usersData = usersSnapshot.val();
+        const postsData = postsSnapshot.val();
 
-        if (data) {
-          const results = Object.keys(data)
+        if (usersData && postsData) {
+          const userResults = Object.keys(usersData)
             .map((key) => {
-              const post = { id: key, ...data[key] };
-              console.log('Processing post:', post);
+              const user = { id: key, ...usersData[key] };
+              return user;
+            })
+            .filter((user) => {
+              const nameMatch = user.displayName && typeof user.displayName === 'string' && user.displayName.toLowerCase().includes(searchQuery.toLowerCase());
+              return nameMatch;
+            });
+
+          const postResults = Object.keys(postsData)
+            .map((key) => {
+              const post = { id: key, ...postsData[key] };
               return post;
             })
             .filter((post) => {
-              const textMatch = post.text && typeof post.text === 'string' && post.text.toLowerCase().includes(searchTerm.toLowerCase());
-              const usernameMatch = post.username && typeof post.username === 'string' && post.username.toLowerCase().includes(searchTerm.toLowerCase());
-              console.log(`Post ID: ${post.id} | Text Match: ${textMatch} | Username Match: ${usernameMatch}`);
+              const textMatch = post.text && typeof post.text === 'string' && post.text.toLowerCase().includes(searchQuery.toLowerCase());
+              const usernameMatch = post.username && typeof post.username === 'string' && post.username.toLowerCase().includes(searchQuery.toLowerCase());
               return textMatch || usernameMatch;
             });
 
-          console.log('Filtered results:', results);
-          setSearchResults(results);
+          setSearchResults({ users: userResults, posts: postResults });
         } else {
-          setSearchResults([]);
+          setSearchResults({ users: [], posts: [] });
         }
       } catch (error) {
         console.error('Error fetching search data:', error);
@@ -52,53 +61,26 @@ const SearchResultsScreen = ({ route }) => {
     };
 
     fetchSearchResults();
-  }, [searchTerm]);
+  }, [searchQuery]);
 
   const goToUserProfile = (userId) => {
     navigation.navigate('Profile2', { userId });
   };
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-  
-  // Affichez l'état posts pour vérifier son contenu
-  useEffect(() => {
-    console.log('posts state updated:', posts);
-  }, [posts]);
-
-  const fetchPosts = async () => {
-    try {
-      const postsRef = firestore().collection('posts');
-      const snapshot = await postsRef.get();
-      const postsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-  
-      console.log('Fetched data:', postsData); // Assurez-vous que les données sont correctes
-  
-      setPosts(postsData.sort((a, b) => b.createdAt - a.createdAt));
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    }
+  const handleSearch = (text) => {
+    setSearchQuery(text);
   };
 
-  
-
-  const PostCard = ({ imageUrl, text, createdAt, userPhotoURL, username, likes, comments }) => {
-    return (
-      <View style={styles.card}>
-        <Image source={{ uri: imageUrl }} style={styles.image} />
-        <Text>{text}</Text>
-        <Text>{new Date(createdAt).toLocaleDateString()}</Text>
-        <Text>{username}</Text>
-        <Image source={{ uri: userPhotoURL }} style={styles.profilePic} />
-        {/* Ajoutez l'affichage des likes et des commentaires si nécessaire */}
-      </View>
-    );
-  };
-  
+  const renderUser = ({ item }) => (
+    <TouchableOpacity style={styles.userItem} onPress={() => goToUserProfile(item.id)}>
+      {item.photoURL ? (
+        <Image source={{ uri: item.photoURL }} style={styles.profileImage} />
+      ) : (
+        <MaterialIcons name="person" size={40} color="gray" />
+      )}
+      <Text style={styles.username}>{item.displayName || 'Unknown User'}</Text>
+    </TouchableOpacity>
+  );
 
   const renderPost = ({ item }) => (
     <View style={styles.post}>
@@ -122,43 +104,37 @@ const SearchResultsScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search..."
+        value={searchQuery}
+        onChangeText={handleSearch}
+      />
       {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>Chargement...</Text>
       ) : error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPost}
-          contentContainerStyle={styles.flatListContent}
-          ListEmptyComponent={<Text style={styles.noResultsText}>No results found.</Text>}
-        />
+        <>
+          <Text style={styles.sectionTitle}>Utilisateurs</Text>
+          <FlatList
+            data={searchResults.users}
+            keyExtractor={(item) => item.id}
+            renderItem={renderUser}
+            contentContainerStyle={styles.flatListContent}
+            ListEmptyComponent={<Text style={styles.noResultsText}>Aucun utilisateur trouvé.</Text>}
+          />
+          <Text style={styles.sectionTitle}>Publications</Text>
+          <FlatList
+            data={searchResults.posts}
+            keyExtractor={(item) => item.id}
+            renderItem={renderPost}
+            contentContainerStyle={styles.flatListContent}
+            ListEmptyComponent={<Text style={styles.noResultsText}>Aucune publication trouvée.</Text>}
+          />
+        </>
       )}
-
-
-<ScrollView>
-    {posts.map(post => (
-      <PostCard
-        key={post.id}
-        id={post.id}
-        imageUrl={post.imageUrl}
-        text={post.text}
-        createdAt={post.createdAt}
-        userPhotoURL={post.userPhotoURL}
-        username={post.username}
-        likes={post.likes}
-        comments={post.comments}
-      />
-    ))}
-  </ScrollView>
-
-
-
     </View>
-
-
-
   );
 };
 
@@ -168,8 +144,43 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#f8f8f8',
   },
+  searchInput: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
   flatListContent: {
     paddingBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  username: {
+    fontWeight: 'bold',
   },
   post: {
     backgroundColor: '#fff',
@@ -187,17 +198,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
   postInfo: {
     justifyContent: 'center',
-  },
-  username: {
-    fontWeight: 'bold',
   },
   createdAt: {
     color: 'gray',
@@ -226,26 +228,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginTop: 20,
-  },
-
-    card: {
-    padding: 10,
-    margin: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  image: {
-    width: '100%',
-    height: 200,
-  },
-  profilePic: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
   },
 });
 

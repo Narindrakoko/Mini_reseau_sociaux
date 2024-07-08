@@ -4,13 +4,22 @@ import { getDatabase } from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MESUREMENTID"
+  apiKey: "AIzaSyAJCxkI9wkzsho370DenKbJPUFbMEwkBmg",
+
+  authDomain: "devgeolocalisation.firebaseapp.com",
+
+  databaseURL: "https://devgeolocalisation-default-rtdb.firebaseio.com",
+
+  projectId: "devgeolocalisation",
+
+  storageBucket: "devgeolocalisation.appspot.com",
+
+  messagingSenderId: "426992373456",
+
+  appId: "1:426992373456:web:5594a6f27aa53244ba18d5",
+
+  measurementId: "G-G714PN43YZ"
+
 };
 
 const app = initializeApp(firebaseConfig);

@@ -40,55 +40,18 @@ const App = () => {
     headerShown: false,
   };
 
-  const handleSearch = async () => {
-    setIsSearching(true);
-
-    try {
-      const usersSnapshot = await get(ref(getDatabase(), 'users'));
-      const postsSnapshot = await get(ref(getDatabase(), 'posts'));
-
-      const usersData = usersSnapshot.exists() ? Object.values(usersSnapshot.val()) : [];
-      const postsData = postsSnapshot.exists() ? Object.values(postsSnapshot.val()) : [];
-
-      const query = searchQuery.toLowerCase();
-      const normalizedQuery = query.replace(/\*/g, '');
-
-      const filteredUsers = usersData.filter(user =>
-        user.username && user.username.toLowerCase().includes(normalizedQuery)
-      );
-
-      const filteredPosts = postsData.filter(post =>
-        post.text && post.text.toLowerCase().includes(normalizedQuery)
-      );
-
-      const searchResults = [
-        ...filteredUsers.map(user => ({ type: 'user', data: user })),
-        ...filteredPosts.map(post => ({ type: 'post', data: post }))
-      ];
-
-      console.log('Filtered search results:', searchResults);
-
-      navigationRef.current?.navigate('SearchResults', { searchResults });
-    } catch (error) {
-      console.error('Error fetching search data:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   return (
     <NavigationContainer ref={navigationRef}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerText}>I-Resaka</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          <TouchableOpacity style={styles.searchIconContainer} onPress={handleSearch}>
-            <Icon name="search" size={24} color="#fff" />
+          
+            <TouchableOpacity
+            style={styles.searchButtonContainer}
+            onPress={() => navigationRef.current?.navigate('SearchResults')}
+          >
+            <Text style={styles.searchButtonText}>Search</Text>
           </TouchableOpacity>
         </View>
         {!isAuthScreen && <NavigationBar />}
@@ -159,6 +122,16 @@ const styles = StyleSheet.create({
   },
   navigatorWithNavbar: {
     marginTop: -70, 
+  },
+  searchButtonContainer: {
+    backgroundColor: '#128C7E',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

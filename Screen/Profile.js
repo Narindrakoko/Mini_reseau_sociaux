@@ -83,27 +83,27 @@ const ProfileScreen2 = ({ navigation, route }) => {
       <View style={styles.infoRow}>
         <MaterialIcons name="account-circle" size={24} color="#075e54" />
         <Text style={styles.infoText}>{username}</Text>
-        <Text style={styles.indicator}>Username</Text>
+     
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="person-outline" size={24} color="#075e54" />
         <Text style={styles.infoText}>{lastName}</Text>
-        <Text style={styles.indicator}>Last Name</Text>
+      
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="person" size={24} color="#075e54" />
         <Text style={styles.infoText}>{name}</Text>
-        <Text style={styles.indicator}>Name</Text>
+   
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="cake" size={24} color="#075e54" />
         <Text style={styles.infoText}>{birthday}</Text>
-        <Text style={styles.indicator}>Birthday</Text>
+       
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="phone" size={24} color="#075e54" />
         <Text style={styles.infoText}>{phoneNumber}</Text>
-        <Text style={styles.indicator}>Phone Number</Text>
+     
       </View>
     </View>
   ), [username, lastName, name, birthday, phoneNumber]);

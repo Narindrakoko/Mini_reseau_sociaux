@@ -51,7 +51,7 @@ const App = () => {
             style={styles.searchButtonContainer}
             onPress={() => navigationRef.current?.navigate('SearchResults')}
           >
-            <Text style={styles.searchButtonText}>Search</Text>
+            <Text style={styles.searchButtonText}>rechercher...</Text>
           </TouchableOpacity>
         </View>
         {!isAuthScreen && <NavigationBar />}

@@ -47,12 +47,14 @@ const App = () => {
         <View style={styles.header}>
           <Text style={styles.headerText}>I-Resaka</Text>
           
+          {!isAuthScreen && (
             <TouchableOpacity
-            style={styles.searchButtonContainer}
-            onPress={() => navigationRef.current?.navigate('SearchResults')}
-          >
-            <Text style={styles.searchButtonText}>rechercher...</Text>
-          </TouchableOpacity>
+              style={styles.searchButtonContainer}
+              onPress={() => navigationRef.current?.navigate('SearchResults')}
+            >
+               <Icon name="search" size={24} color="#fff" /> 
+            </TouchableOpacity>
+          )}
         </View>
         {!isAuthScreen && <NavigationBar />}
         <View style={[styles.navigatorContainer, !isAuthScreen && styles.navigatorWithNavbar]}>

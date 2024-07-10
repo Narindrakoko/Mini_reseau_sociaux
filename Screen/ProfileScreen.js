@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Image, FlatList, StyleSheet, M
 import { getAuth, signOut, updateProfile } from 'firebase/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getDatabase, ref as dbRef, onValue, update, set, push, serverTimestamp, remove } from 'firebase/database';
+import { getDatabase, ref as dbRef, onValue, update, set, push, serverTimestamp, remove, get } from 'firebase/database';
 import { MaterialIcons, Ionicons, Entypo } from '@expo/vector-icons';
 
 const ProfileScreen = ({ navigation }) => {
@@ -115,21 +115,19 @@ const ProfileScreen = ({ navigation }) => {
         const db = getDatabase();
         const userRef = dbRef(db, `users/${user.uid}`);
         await update(userRef, { photoURL: downloadURL });
-
+  
         // Mettre à jour la photo de profil dans les posts existants
         const postsRef = dbRef(db, 'posts');
-        onValue(postsRef, (snapshot) => {
-          const data = snapshot.val();
-          if (data) {
-            const updates = {};
-            Object.keys(data).forEach((key) => {
-              if (data[key].userId === user.uid) {
-                updates[`/posts/${key}/userPhotoURL`] = downloadURL;
-              }
-            });
-            update(db, updates);
-          }
-        });
+        const postsSnapshot = await get(postsRef);
+        if (postsSnapshot.exists()) {
+          const updates = {};
+          postsSnapshot.forEach((post) => {
+            if (post.val().userId === user.uid) {
+              updates[`/posts/${post.key}/userPhotoURL`] = downloadURL;
+            }
+          });
+          await update(postsRef, updates);
+        }
       } catch (error) {
         console.error('Error updating profile image:', error);
       }
@@ -137,6 +135,8 @@ const ProfileScreen = ({ navigation }) => {
       console.error('User is not authenticated.');
     }
   }, [user]);
+  
+  
 
   const createProfilePhotoPost = useCallback(async (downloadURL) => {
     if (user) {
@@ -167,7 +167,7 @@ const ProfileScreen = ({ navigation }) => {
           displayName: name,
           phoneNumber: phoneNumber
         });
-
+  
         const db = getDatabase();
         const userRef = dbRef(db, `users/${user.uid}`);
         await update(userRef, {
@@ -177,6 +177,9 @@ const ProfileScreen = ({ navigation }) => {
           phoneNumber,
           username
         });
+  
+        // Mettre à jour les noms d'utilisateur dans tous les posts
+        await updatePostsUsernames(name);
       } catch (error) {
         console.error('Error updating user information:', error);
       }
@@ -184,6 +187,35 @@ const ProfileScreen = ({ navigation }) => {
       console.error('User is not authenticated.');
     }
   }, [user, name, lastName, birthday, phoneNumber, username]);
+  
+  
+  
+  const updatePostsUsernames = useCallback(async (newUsername) => {
+    if (user) {
+      try {
+        const db = getDatabase();
+        const postsRef = dbRef(db, 'posts');
+        const postsSnapshot = await get(postsRef);
+        if (postsSnapshot.exists()) {
+          const updates = {};
+          postsSnapshot.forEach((post) => {
+            if (post.val().userId === user.uid) {
+              updates[`/posts/${post.key}/username`] = newUsername;
+            }
+          });
+          await update(postsRef, updates);
+        }
+      } catch (error) {
+        console.error('Error updating posts usernames:', error);
+      }
+    } else {
+      console.error('User is not authenticated.');
+    }
+  }, [user]);
+  
+  
+  
+  
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);

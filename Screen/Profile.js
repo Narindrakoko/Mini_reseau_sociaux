@@ -110,7 +110,7 @@ const ProfileScreen2 = ({ navigation, route }) => {
 
   const renderPost = useCallback(({ item }) => (
     <View style={styles.post}>
-      <Text style={styles.postText}>{item.text || 'Aucune description'}</Text>
+      <Text style={styles.postText}>{item.text || 'Photo de profil'}</Text>
       {item.imageUrl && (
         <TouchableOpacity onPress={() => {
           setModalVisible(true);

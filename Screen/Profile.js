@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, FlatList, StyleSheet, Modal, Alert } from 'react-native';
 import { getAuth } from 'firebase/auth';
-import { getDatabase, ref as dbRef, onValue } from 'firebase/database';
+import { getDatabase, ref as dbRef, onValue, set, remove } from 'firebase/database';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import ProfileScreen from './ProfileScreen';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen2 = ({ navigation, route }) => {
   const { userId } = route.params;
@@ -18,6 +19,10 @@ const ProfileScreen2 = ({ navigation, route }) => {
   const [profilePhotos, setProfilePhotos] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalImage, setModalImage] = useState(null);
+  const [isFriend, setIsFriend] = useState(false);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+
 
   useEffect(() => {
     if (userId) {
@@ -52,12 +57,64 @@ const ProfileScreen2 = ({ navigation, route }) => {
         console.error('Error fetching user posts:', error);
       });
 
+      const currentUserId = getAuth().currentUser.uid;
+      const friendRequestRef = dbRef(db, `friendRequests/${currentUserId}/${userId}`);
+
+      const unsubscribeFriendRequestListener = onValue(friendRequestRef, (snapshot) => {
+        setFriendRequestSent(snapshot.exists());
+      });
+
+      const friendsRef = dbRef(db, `friends/${currentUserId}/${userId}`);
+      const unsubscribeFriendListener = onValue(friendsRef, (snapshot) => {
+        setIsFriend(snapshot.exists());
+      });
+
       return () => {
         unsubscribeUserListener();
         unsubscribePostsListener();
+        unsubscribeFriendRequestListener();
+        unsubscribeFriendListener();
       };
     }
   }, [userId]);
+
+
+  
+
+  const handleAddFriend = () => {
+    const currentUserId = getAuth().currentUser.uid;
+    const db = getDatabase();
+    const friendRequestRef = dbRef(db, `friendRequests/${userId}/${currentUserId}`);
+
+    set(friendRequestRef, {
+      displayName: name,
+      photoURL: profileImage,
+      requestDate: new Date().toISOString(),
+    });
+
+    setFriendRequestSent(true);
+  };
+
+  const handleCancelFriendRequest = () => {
+    const currentUserId = getAuth().currentUser.uid;
+    const db = getDatabase();
+    const friendRequestRef = dbRef(db, `friendRequests/${userId}/${currentUserId}`);
+
+    remove(friendRequestRef);
+    setFriendRequestSent(false);
+  };
+
+  const handleDeleteFriend = () => {
+    const currentUserId = getAuth().currentUser.uid;
+    const db = getDatabase();
+
+    // Remove friends from both users' friend lists
+    remove(dbRef(db, `friends/${currentUserId}/${userId}`));
+    remove(dbRef(db, `friends/${userId}/${currentUserId}`));
+
+    setIsFriend(false);
+    setDropdownVisible(false);
+  };
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
@@ -83,30 +140,55 @@ const ProfileScreen2 = ({ navigation, route }) => {
       <View style={styles.infoRow}>
         <MaterialIcons name="account-circle" size={24} color="#075e54" />
         <Text style={styles.infoText}>{username}</Text>
-     
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="person-outline" size={24} color="#075e54" />
         <Text style={styles.infoText}>{lastName}</Text>
-      
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="person" size={24} color="#075e54" />
         <Text style={styles.infoText}>{name}</Text>
-   
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="cake" size={24} color="#075e54" />
         <Text style={styles.infoText}>{birthday}</Text>
-       
       </View>
       <View style={styles.infoRow}>
         <MaterialIcons name="phone" size={24} color="#075e54" />
         <Text style={styles.infoText}>{phoneNumber}</Text>
+      </View>
+      {!isFriend && (
+        <TouchableOpacity
+          style={styles.addFriendButton}
+          onPress={friendRequestSent ? handleCancelFriendRequest : handleAddFriend}
+        >
+          <Text style={styles.addFriendButtonText}>
+            {friendRequestSent ? 'Annuler la demande' : 'Ajouter comme ami'}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {isFriend && (
+        <View style={styles.friendButtons}>
+        <View style={styles.dropdownButtonContainer}>
+          <TouchableOpacity
+            style={styles.dropdownButton}
+            onPress={() => setDropdownVisible(!dropdownVisible)}
+          >
+            <Text style={styles.dropdownButtonText}>Amis</Text>
+          </TouchableOpacity>
+          {dropdownVisible && (
+            <View style={styles.dropdownMenu}>
+              <TouchableOpacity style={styles.dropdownItem} onPress={handleDeleteFriend}>
+                <Text style={styles.dropdownItemText}>Supprimer l'ami</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
      
       </View>
+      )}
     </View>
-  ), [username, lastName, name, birthday, phoneNumber]);
+  ), [username, lastName, name, birthday, phoneNumber, friendRequestSent, isFriend, dropdownVisible]);
 
   const renderPost = useCallback(({ item }) => (
     <View style={styles.post}>
@@ -134,11 +216,9 @@ const ProfileScreen2 = ({ navigation, route }) => {
     </View>
   ), []);
 
-
-
   const renderListHeader = useCallback(() => (
     <>
-     {renderProfileSection()}
+      {renderProfileSection()}
       {renderInfoSection()}
       <Text style={styles.sectionTitle}>Album photo</Text>
       <FlatList
@@ -155,47 +235,36 @@ const ProfileScreen2 = ({ navigation, route }) => {
         keyExtractor={(item) => item.id}
         horizontal
         style={styles.flatList}
-        
       />
-         <Text style={styles.sectionTitle}>Tous ces publications</Text>
-
+      <Text style={styles.sectionTitle}>Tous ces publications</Text>
     </>
-  ), [renderProfileSection, renderInfoSection,photoAlbum, profilePhotos, renderPhoto]);
+  ), [renderProfileSection, renderInfoSection, photoAlbum, profilePhotos, renderPhoto]);
 
   const renderListFooter = useCallback(() => (
     <>
-     
-   
-    </>
-  ), []);
-
-  
-
-  return (
-    <>
-      <FlatList
-        data={posts}
-        renderItem={renderPost}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderListHeader}
-        ListFooterComponent={renderListFooter}
-      />
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={modalVisible} transparent={true} animationType="slide">
         <View style={styles.modalContainer}>
           <Image source={{ uri: modalImage }} style={styles.modalImage} />
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => setModalVisible(false)}
           >
-            <Ionicons name="close" size={30} color="white" />
+            <Ionicons name="close-circle" size={40} color="white" />
           </TouchableOpacity>
         </View>
       </Modal>
     </>
+  ), [modalVisible, modalImage]);
+
+  return (
+    <FlatList
+      data={posts}
+      renderItem={renderPost}
+      keyExtractor={(item) => item.id}
+      ListHeaderComponent={renderListHeader}
+      ListFooterComponent={renderListFooter}
+      contentContainerStyle={styles.container}
+    />
   );
 };
 
@@ -286,6 +355,92 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 30,
     right: 30,
+  },
+  addFriendButton: {
+    backgroundColor: '#075e54',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  addFriendButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  dropdownButton: {
+    backgroundColor: '#075e54',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  dropdownButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  dropdownMenu: {
+    marginTop: 10,
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    elevation: 2,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  friendButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  dropdownButtonContainer: {
+    position: 'relative',
+  },
+  dropdownButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginLeft: 50,
+  },
+  dropdownButtonText: {
+    color: 'grey',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 30,
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    elevation: 2,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  messageButton: {
+    backgroundColor: '#075e54',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  messageButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

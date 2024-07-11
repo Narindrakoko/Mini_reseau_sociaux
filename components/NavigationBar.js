@@ -13,6 +13,7 @@ const NavigationBar = () => {
   const [lastSentMessage, setLastSentMessage] = useState('');
   const [notificationsCount, setNotificationsCount] = useState(0); // État pour le nombre de notifications
   const currentUser = auth.currentUser;
+  const [friendRequestsCount, setFriendRequestsCount] = useState(0);
 
   useEffect(() => {
     const messagesRef = ref(database, 'messages');
@@ -46,6 +47,15 @@ const NavigationBar = () => {
       }
     });
 
+   
+
+    const friendRequestsRef = ref(database, `friendRequests/${currentUser.uid}`);
+    const unsubscribeFriendRequests = onValue(friendRequestsRef, (snapshot) => {
+      const friendRequests = snapshot.val() || {};
+      const friendRequestsCount = Object.keys(friendRequests).length;
+      setFriendRequestsCount(friendRequestsCount);
+    });
+
     const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
       const notifications = snapshot.val() || {};
       const notificationsCount = Object.keys(notifications).length; // Calcul du nombre de notifications
@@ -56,7 +66,10 @@ const NavigationBar = () => {
       unsubscribeMessages();
       unsubscribeUserMessage();
       unsubscribeNotifications(); // Désabonnement des notifications
+      unsubscribeFriendRequests();
     };
+
+
   }, [currentUser]);
 
   return (
@@ -64,9 +77,14 @@ const NavigationBar = () => {
       <TouchableOpacity onPress={() => navigation.navigate('Home')}>
         <Icon name="home" size={24} color="white" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-        <Icon name="account-circle" size={24} color="white" />
-      </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate('FriendRequests')}>
+  <Badge
+    value={friendRequestsCount}
+    status="error"
+    containerStyle={{ position: 'absolute', top: -6, right: -10 }}
+  />
+  <Icon name="account-circle" size={24} color="white" />
+</TouchableOpacity>
       <TouchableOpacity onPress={() => navigation.navigate('users')}>
         <Badge
           value={unreadMessagesCount}

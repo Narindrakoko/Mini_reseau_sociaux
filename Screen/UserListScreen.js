@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput } from 'react-native';
 import { auth, database } from '../firebaseConfig';
 import { ref, get, child } from 'firebase/database';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const UserList = ({ navigation }) => {
   const [users, setUsers] = useState([]);
@@ -91,7 +92,14 @@ const UserList = ({ navigation }) => {
             style={styles.userItem}
             onPress={() => handleUserSelect(user)}
           >
-            <Image source={{ uri: user.photoURL }} style={styles.userAvatar} />
+
+{user.photoURL ? (
+        <Image source={{ uri: user.photoURL }} style={styles.userAvatar} />
+      ) : (
+        <MaterialIcons name="person" size={40} color="gray" />
+      )}
+
+           
             <View style={styles.userInfo}>
               <Text style={styles.username}>{user.name}</Text>
               <Text style={styles.lastMessage}>

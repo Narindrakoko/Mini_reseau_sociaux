@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   post: {
     backgroundColor: '#fff',
     borderRadius: 8,
-    padding: 15,
+    padding: 5,
     marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: '100%',
-    height: 200,
+    height: 250,
     borderRadius: 8,
     marginBottom: 10,
   },

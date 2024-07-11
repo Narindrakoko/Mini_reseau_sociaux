@@ -6,6 +6,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getDatabase, ref as dbRef, onValue, update, set, push, serverTimestamp, remove, get } from 'firebase/database';
 import { MaterialIcons, Ionicons, Entypo } from '@expo/vector-icons';
 
+
 const ProfileScreen = ({ navigation }) => {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -24,6 +25,7 @@ const ProfileScreen = ({ navigation }) => {
   const menuRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalImage, setModalImage] = useState(null);
+
 
   useEffect(() => {
     if (user) {
@@ -127,6 +129,7 @@ const ProfileScreen = ({ navigation }) => {
             }
           });
           await update(postsRef, updates);
+          alert('Mise à jour de la photo de profil réussie.');
         }
       } catch (error) {
         console.error('Error updating profile image:', error);
@@ -178,15 +181,29 @@ const ProfileScreen = ({ navigation }) => {
           username
         });
   
-        // Mettre à jour les noms d'utilisateur dans tous les posts
+        // Update usernames in all posts
         await updatePostsUsernames(name);
+  
+        Alert.alert(
+          'Succès',
+          'Mise à jour des informations réussie.',
+          [{ text: 'OK', onPress: () => {} }],
+          { cancelable: false }
+        );
       } catch (error) {
         console.error('Error updating user information:', error);
+        Alert.alert(
+          'Erreur',
+          'Une erreur s\'est produite lors de la mise à jour des informations.',
+          [{ text: 'OK', onPress: () => {} }],
+          { cancelable: false }
+        );
       }
     } else {
       console.error('User is not authenticated.');
     }
   }, [user, name, lastName, birthday, phoneNumber, username]);
+  
   
   
   
@@ -253,7 +270,7 @@ const ProfileScreen = ({ navigation }) => {
               value={username}
               onChangeText={setUsername}
             />
-            <Text style={styles.indicator}>Username</Text>
+            <Text style={styles.indicator}>Nom</Text>
           </View>
           <View style={styles.infoRow}>
             <MaterialIcons name="person-outline" size={24} color="#075e54" />
@@ -263,7 +280,7 @@ const ProfileScreen = ({ navigation }) => {
               value={lastName}
               onChangeText={setLastName}
             />
-            <Text style={styles.indicator}>Last Name</Text>
+            <Text style={styles.indicator}>Prénom</Text>
           </View>
           <View style={styles.infoRow}>
             <MaterialIcons name="person" size={24} color="#075e54" />
@@ -273,7 +290,7 @@ const ProfileScreen = ({ navigation }) => {
               value={name}
               onChangeText={setName}
             />
-            <Text style={styles.indicator}>Name</Text>
+            <Text style={styles.indicator}>Nom d'utilisateur</Text>
           </View>
           <View style={styles.infoRow}>
             <MaterialIcons name="cake" size={24} color="#075e54" />
@@ -283,7 +300,7 @@ const ProfileScreen = ({ navigation }) => {
               value={birthday}
               onChangeText={setBirthday}
             />
-            <Text style={styles.indicator}>Birthday</Text>
+            <Text style={styles.indicator}>Anniversaire</Text>
           </View>
           <View style={styles.infoRow}>
             <MaterialIcons name="phone" size={24} color="#075e54" />
@@ -293,10 +310,11 @@ const ProfileScreen = ({ navigation }) => {
               value={phoneNumber}
               onChangeText={setPhoneNumber}
             />
-            <Text style={styles.indicator}>Phone Number</Text>
+            <Text style={styles.indicator}>Tel</Text>
           </View>
-          <TouchableOpacity style={styles.saveButton} onPress={handleUpdateProfile}>
-            <Text style={styles.saveButtonText}>Save</Text>
+          <TouchableOpacity style={styles.saveButton} onPress={() => { handleUpdateProfile(); setIsEditing(false); }}>
+
+            <Text style={styles.saveButtonText}>Enregistré</Text>
           </TouchableOpacity>
         </>
       ) : (

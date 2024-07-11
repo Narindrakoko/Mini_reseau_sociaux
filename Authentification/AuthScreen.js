@@ -25,8 +25,8 @@ const AuthScreen = ({ navigation }) => {
         })
         .catch(error => {
           setIsLoading(false);
-          setError('Error logging in: ' + error.message);
-          console.error('Error logging in:', error);
+        
+          Alert.alert('vérifier votre adresse email ou votre mot de passe');
         });
     } else {
       createUserWithEmailAndPassword(auth, email, password)
@@ -34,7 +34,7 @@ const AuthScreen = ({ navigation }) => {
           const user = userCredential.user;
           updateProfile(user, { displayName: username })
             .then(() => {
-              console.log('Registered and profile updated:', user);
+           
               setIsLoading(false);
               navigation.navigate('Home');
             })
@@ -46,8 +46,7 @@ const AuthScreen = ({ navigation }) => {
         })
         .catch(error => {
           setIsLoading(false);
-          setError('Error registering: ' + error.message);
-          console.error('Error registering:', error);
+          Alert.alert('le mot de passe dot etre plus de 6 caractères.');
         });
     }
   };
@@ -131,7 +130,7 @@ const AuthScreen = ({ navigation }) => {
                 {isLogin ? "Créer un compte" : 'Se connecté'}
               </Text>
             </TouchableOpacity>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+         
           </>
         )}
       </LinearGradient>

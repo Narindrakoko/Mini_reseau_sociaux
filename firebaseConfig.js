@@ -8,7 +8,7 @@ const firebaseConfig = {
 
   authDomain: "your auth domain",
 
-  databaseURL: "your database url",
+  databaseURL: "your databas url",
 
   projectId: "your project id",
 

@@ -165,7 +165,7 @@ const ChatScreen = ({ navigation, route }) => {
           <Text style={styles.noMessageText}>Aucun message pour l'instant</Text>
         ) : (
           <FlatList
-            data={messages.reverse()} // Inverse l'ordre des messages pour afficher les plus récents en bas
+            data={messages.reverse()} // Inverse l'ordre des messages pour afficher le plus récents en bas
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View
